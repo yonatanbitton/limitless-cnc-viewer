@@ -1,4 +1,4 @@
-# 🏭 Limitless CNC — AI-Powered STEP Analyzer
+# 🏭 AI CNC Viewer — AI-Powered STEP Analyzer
 
 Interactive 3D viewer for CNC machining analysis. Upload any STEP file and get instant AI manufacturing insights.
 
@@ -52,4 +52,4 @@ This allows Gemini to look at an STP file not as an image, but as a structured l
 
 ## About
 
-Built for [Limitless CNC](https://limitlesscnc.ai/) — an AI CAM Agent that integrates with NX-CAM to automate CNC programming.
+Built as an AI CAM Agent that integrates with NX-CAM to automate CNC programming.
