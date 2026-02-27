@@ -1434,89 +1434,95 @@
 
         // ========== ANIMATED SVG CNC SIMULATION ==========
         window.startCNCSimulation = function () {
-          if (cncSimRunning) return;
-          cncSimRunning = true;
+          try {
+            if (cncSimRunning) return;
+            cncSimRunning = true;
 
-          // Close other modes
-          if (wireframeMode) window.toggleWireframe();
-          if (explodeMode) window.toggleExplode();
-          if (xrayMode) window.toggleXRay();
-          if (dimsVisible) window.toggleDimensions();
+            // Close other modes
+            if (wireframeMode) window.toggleWireframe();
+            if (explodeMode) window.toggleExplode();
+            if (xrayMode) window.toggleXRay();
+            if (dimsVisible) window.toggleDimensions();
 
-          document.getElementById('btn-cnc').classList.add('active');
-          document.getElementById('cnc-hud').classList.add('visible');
+            document.getElementById('btn-cnc').classList.add('active');
+            document.getElementById('cnc-hud').classList.add('visible');
 
-          // Background 3D scene becomes a subtle wireframe blueprint
-          if (modelGroup) {
-            meshes.forEach(function (m) {
-              m.material.transparent = true;
-              m.material.opacity = 0.15;
-              m.material.wireframe = true;
-              m.material.color.setHex(0x4da6ff);
-            });
-          }
-          controls.autoRotate = true;
-          controls.autoRotateSpeed = 0.5; // Slow ambient rotation
-
-          // Init SVG Animation
-          var path = document.getElementById('svg-toolpath');
-          var head = document.getElementById('svg-toolhead');
-          var gcode = document.getElementById('cnc-gcode-container');
-
-          var len = path.getTotalLength();
-          path.style.strokeDasharray = len;
-          path.style.strokeDashoffset = len;
-          gcode.innerHTML = '';
-
-          var startTime = performance.now();
-          var duration = 12000; // 12 seconds simulation
-          var lineNum = 100;
-          var lastPt = { x: 0, y: 0 };
-
-          function animStep(now) {
-            if (!cncSimRunning) return;
-            var elapsed = now - startTime;
-            var t = Math.min(elapsed / duration, 1);
-
-            // Ease out quad
-            var easeT = t * (2 - t);
-            var currentLen = easeT * len;
-            path.style.strokeDashoffset = len - currentLen;
-
-            var pt = path.getPointAtLength(currentLen);
-            head.setAttribute('transform', 'translate(' + pt.x + ',' + pt.y + ') rotate(' + (elapsed * 0.5) + ')');
-
-            // Generate G-code lines as we move
-            var dist = Math.hypot(pt.x - lastPt.x, pt.y - lastPt.y);
-            if (dist > 5 || Math.random() < 0.05) {
-              lastPt = pt;
-              var isRapid = Math.random() < 0.1;
-              var cmd = isRapid ? 'G00' : 'G01';
-              var xStr = (pt.x * 0.25).toFixed(3);
-              var yStr = (pt.y * 0.25).toFixed(3);
-              var fStr = (isRapid ? 800 : Math.round(150 + Math.random() * 50));
-              var txt = 'N' + lineNum + ' ' + cmd + ' X' + xStr + ' Y' + yStr + ' Z-2.500 F' + fStr;
-
-              var span = document.createElement('span');
-              span.textContent = txt;
-              gcode.appendChild(span);
-              if (gcode.children.length > 20) gcode.removeChild(gcode.firstChild);
-              lineNum += 10;
+            // Background 3D scene becomes a subtle wireframe blueprint
+            if (modelGroup) {
+              meshes.forEach(function (m) {
+                m.material.transparent = true;
+                m.material.opacity = 0.15;
+                m.material.wireframe = true;
+                m.material.color.setHex(0x4da6ff);
+              });
             }
+            controls.autoRotate = true;
+            controls.autoRotateSpeed = 0.5; // Slow ambient rotation
 
-            if (t < 1) {
-              cncAnimId = requestAnimationFrame(animStep);
-            } else {
-              var done = document.createElement('span');
-              done.textContent = 'M30 ; END OF PROGRAM';
-              done.style.color = 'var(--green)';
-              gcode.appendChild(done);
+            // Init SVG Animation
+            var path = document.getElementById('svg-toolpath');
+            var head = document.getElementById('svg-toolhead');
+            var gcode = document.getElementById('cnc-gcode-container');
 
-              // Flash success and auto-close
-              setTimeout(stopCNCSimulation, 2500);
+            var len = path.getTotalLength();
+            path.style.strokeDasharray = len;
+            path.style.strokeDashoffset = len;
+            gcode.innerHTML = '';
+
+            var startTime = performance.now();
+            var duration = 12000; // 12 seconds simulation
+            var lineNum = 100;
+            var lastPt = { x: 0, y: 0 };
+
+            function animStep(now) {
+              if (!cncSimRunning) return;
+              var elapsed = now - startTime;
+              var t = Math.min(elapsed / duration, 1);
+
+              // Ease out quad
+              var easeT = t * (2 - t);
+              var currentLen = easeT * len;
+              path.style.strokeDashoffset = len - currentLen;
+
+              var pt = path.getPointAtLength(currentLen);
+              head.setAttribute('transform', 'translate(' + pt.x + ',' + pt.y + ') rotate(' + (elapsed * 0.5) + ')');
+
+              // Generate G-code lines as we move
+              var dist = Math.hypot(pt.x - lastPt.x, pt.y - lastPt.y);
+              if (dist > 5 || Math.random() < 0.05) {
+                lastPt = pt;
+                var isRapid = Math.random() < 0.1;
+                var cmd = isRapid ? 'G00' : 'G01';
+                var xStr = (pt.x * 0.25).toFixed(3);
+                var yStr = (pt.y * 0.25).toFixed(3);
+                var fStr = (isRapid ? 800 : Math.round(150 + Math.random() * 50));
+                var txt = 'N' + lineNum + ' ' + cmd + ' X' + xStr + ' Y' + yStr + ' Z-2.500 F' + fStr;
+
+                var span = document.createElement('span');
+                span.textContent = txt;
+                gcode.appendChild(span);
+                if (gcode.children.length > 20) gcode.removeChild(gcode.firstChild);
+                lineNum += 10;
+              }
+
+              if (t < 1) {
+                cncAnimId = requestAnimationFrame(animStep);
+              } else {
+                var done = document.createElement('span');
+                done.textContent = 'M30 ; END OF PROGRAM';
+                done.style.color = 'var(--green)';
+                gcode.appendChild(done);
+
+                // Flash success and auto-close
+                setTimeout(window.stopCNCSimulation, 2500);
+              }
             }
+            cncAnimId = requestAnimationFrame(animStep);
+          } catch (e) {
+            console.error("Simulation error", e);
+            alert("Error: " + e.message);
+            window.stopCNCSimulation();
           }
-          cncAnimId = requestAnimationFrame(animStep);
         };
 
         window.stopCNCSimulation = function () {
