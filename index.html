@@ -1,0 +1,1590 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Limitless CNC — AI-Powered STEP Analyzer</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --accent: #0066ff;
+      --accent2: #7c3aed;
+      --green: #00c896;
+      --amber: #f59e0b;
+      --red: #ef4444;
+      --surface: rgba(15, 15, 25, 0.75);
+      --border: rgba(255, 255, 255, 0.08);
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #06060b;
+      color: #e0e0e0;
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    #canvas-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    .bg-gradient {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+      background: radial-gradient(ellipse at 20% 40%, rgba(0, 102, 255, 0.07) 0%, transparent 55%),
+        radial-gradient(ellipse at 75% 25%, rgba(124, 58, 237, 0.05) 0%, transparent 45%),
+        radial-gradient(ellipse at 50% 85%, rgba(0, 200, 150, 0.03) 0%, transparent 40%);
+    }
+
+    /* LOADING */
+    .loading-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 2000;
+      background: #06060b;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .loading-screen.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .loading-logo {
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 28px;
+      color: white;
+      margin-bottom: 32px;
+      animation: logo-pulse 2s ease-in-out infinite;
+      box-shadow: 0 0 40px rgba(0, 102, 255, 0.3);
+    }
+
+    @keyframes logo-pulse {
+
+      0%,
+      100% {
+        transform: scale(1);
+      }
+
+      50% {
+        transform: scale(1.05);
+        box-shadow: 0 0 60px rgba(0, 102, 255, 0.5);
+      }
+    }
+
+    .loading-brand {
+      font-size: 20px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+
+    .loading-subtitle {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.5);
+      margin-bottom: 40px;
+    }
+
+    .loading-progress-container {
+      width: 280px;
+      margin-bottom: 24px;
+    }
+
+    .loading-progress-bar {
+      height: 3px;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .loading-progress-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: 2px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      transition: width 0.5s ease;
+    }
+
+    .loading-steps {
+      list-style: none;
+      width: 260px;
+    }
+
+    .loading-step {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 0;
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.25);
+      font-family: 'JetBrains Mono', monospace;
+      transition: color 0.3s;
+    }
+
+    .loading-step.active {
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .loading-step.done {
+      color: var(--green);
+    }
+
+    .loading-step-icon {
+      width: 16px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+    }
+
+    /* HEADER */
+    .header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 28px;
+      background: rgba(6, 6, 11, 0.75);
+      backdrop-filter: blur(24px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 14px;
+      color: white;
+    }
+
+    .brand {
+      font-weight: 700;
+      font-size: 16px;
+      color: #fff;
+    }
+
+    .badge {
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      background: rgba(0, 200, 150, 0.12);
+      color: var(--green);
+      border: 1px solid rgba(0, 200, 150, 0.2);
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .header-link {
+      color: rgba(255, 255, 255, 0.5);
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .header-link:hover {
+      color: #fff;
+    }
+
+    /* PANELS */
+    .panel {
+      position: fixed;
+      z-index: 100;
+      background: var(--surface);
+      backdrop-filter: blur(24px);
+      border-radius: 14px;
+      border: 1px solid var(--border);
+    }
+
+    /* INFO */
+    .info-panel {
+      top: 64px;
+      left: 20px;
+      width: 280px;
+      padding: 20px;
+    }
+
+    .info-panel h2 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+
+    .info-panel .subtitle {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.35);
+      margin-bottom: 16px;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .stat {
+      background: rgba(255, 255, 255, 0.025);
+      border-radius: 8px;
+      padding: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .stat-label {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: rgba(255, 255, 255, 0.35);
+      margin-bottom: 3px;
+    }
+
+    .stat-value {
+      font-size: 18px;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+      font-size: 11px;
+    }
+
+    .detail-row .label {
+      color: rgba(255, 255, 255, 0.35);
+    }
+
+    .detail-row .value {
+      color: #fff;
+      font-weight: 500;
+    }
+
+    /* CONTROLS */
+    .controls-panel {
+      top: 64px;
+      right: 20px;
+      width: 200px;
+      padding: 16px;
+    }
+
+    .controls-panel h3 {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: rgba(255, 255, 255, 0.35);
+      margin-bottom: 12px;
+    }
+
+    .control-btn {
+      width: 100%;
+      padding: 8px 12px;
+      margin-bottom: 5px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.025);
+      color: #fff;
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+
+    .control-btn:hover {
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .control-btn.active {
+      background: rgba(0, 102, 255, 0.12);
+      border-color: rgba(0, 102, 255, 0.25);
+      color: #4da6ff;
+    }
+
+    .control-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .color-section {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .color-swatches {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
+    .swatch {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: border-color 0.2s, transform 0.15s;
+    }
+
+    .swatch:hover {
+      transform: scale(1.15);
+    }
+
+    .swatch.active {
+      border-color: #fff;
+    }
+
+    .camera-section {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .camera-presets {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px;
+      margin-top: 8px;
+    }
+
+    .camera-btn {
+      padding: 6px 8px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.025);
+      color: rgba(255, 255, 255, 0.5);
+      font-family: 'Inter', sans-serif;
+      font-size: 10px;
+      font-weight: 500;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+
+    .camera-btn:hover {
+      background: rgba(255, 255, 255, 0.06);
+      color: #fff;
+    }
+
+    .camera-btn.active {
+      background: rgba(0, 102, 255, 0.12);
+      border-color: rgba(0, 102, 255, 0.25);
+      color: #4da6ff;
+    }
+
+    /* AI PANEL */
+    .ai-panel {
+      bottom: 48px;
+      left: 20px;
+      width: 380px;
+      padding: 18px;
+      max-height: 340px;
+      overflow-y: auto;
+    }
+
+    .ai-panel::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .ai-panel::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .ai-panel::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+    }
+
+    .ai-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .ai-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    .ai-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .ai-subtitle {
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.35);
+    }
+
+    .ai-badge {
+      margin-left: auto;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .ai-badge.analyzing {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--amber);
+      animation: ai-pulse 1.5s ease-in-out infinite;
+    }
+
+    .ai-badge.complete {
+      background: rgba(0, 200, 150, 0.15);
+      color: var(--green);
+      animation: none;
+    }
+
+    @keyframes ai-pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.5;
+      }
+    }
+
+    .ai-line {
+      display: flex;
+      gap: 10px;
+      padding: 7px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+      font-size: 11px;
+      line-height: 1.5;
+      opacity: 0;
+      transform: translateY(6px);
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+
+    .ai-line.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .ai-line-icon {
+      flex-shrink: 0;
+      width: 18px;
+      text-align: center;
+      font-size: 12px;
+    }
+
+    .ai-line-content {
+      flex: 1;
+    }
+
+    .ai-line-label {
+      color: rgba(255, 255, 255, 0.35);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 2px;
+    }
+
+    .ai-line-value {
+      color: #fff;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+    }
+
+    .ai-highlight {
+      color: var(--green);
+      font-weight: 600;
+    }
+
+    .ai-warning {
+      color: var(--amber);
+    }
+
+    .ai-metric {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    /* DROP OVERLAY */
+    .drop-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 500;
+      background: rgba(6, 6, 11, 0.85);
+      backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+    }
+
+    .drop-overlay.visible {
+      display: flex;
+    }
+
+    .drop-box {
+      width: 400px;
+      height: 240px;
+      border: 2px dashed rgba(0, 102, 255, 0.4);
+      border-radius: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      background: rgba(0, 102, 255, 0.05);
+      transition: border-color 0.3s, background 0.3s;
+    }
+
+    .drop-box.hover {
+      border-color: var(--accent);
+      background: rgba(0, 102, 255, 0.1);
+    }
+
+    .drop-icon {
+      font-size: 48px;
+      opacity: 0.6;
+    }
+
+    .drop-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .drop-subtitle {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    /* STATUS */
+    .status-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      padding: 8px 28px;
+      background: rgba(6, 6, 11, 0.7);
+      backdrop-filter: blur(12px);
+      border-top: 1px solid rgba(255, 255, 255, 0.04);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.3);
+    }
+
+    .status-dot {
+      display: inline-block;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--green);
+      margin-right: 6px;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.4;
+      }
+    }
+
+    .help-hint {
+      position: fixed;
+      bottom: 42px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      background: var(--surface);
+      backdrop-filter: blur(16px);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      padding: 8px 16px;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.5);
+      transition: opacity 0.5s ease;
+      pointer-events: none;
+    }
+
+    .help-hint.hidden {
+      opacity: 0;
+    }
+
+    /* CNC SIMULATION TIMELINE */
+    .sim-timeline {
+      position: fixed;
+      bottom: 42px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 150;
+      background: var(--surface);
+      backdrop-filter: blur(24px);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      padding: 14px 24px;
+      width: 500px;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .sim-timeline.visible {
+      display: flex;
+    }
+
+    .sim-timeline-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .sim-timeline-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sim-timeline-phase {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--amber);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .sim-track {
+      height: 4px;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .sim-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: 2px;
+      background: linear-gradient(90deg, var(--accent), var(--green));
+      transition: width 0.1s linear;
+    }
+
+    .sim-phases {
+      display: flex;
+      justify-content: space-between;
+      font-size: 9px;
+      color: rgba(255, 255, 255, 0.3);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .sim-phases span.active {
+      color: var(--amber);
+      font-weight: 600;
+    }
+
+    .sim-phases span.done {
+      color: var(--green);
+    }
+
+    .sim-stats {
+      display: flex;
+      gap: 16px;
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.4);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .sim-stats span {
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    /* DIMENSION LABELS */
+    .dim-label {
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 500;
+      background: rgba(6, 6, 11, 0.85);
+      white-space: nowrap;
+      backdrop-filter: blur(8px);
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+
+    @media (max-width: 900px) {
+
+      .info-panel,
+      .ai-panel,
+      .sim-timeline {
+        display: none;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .controls-panel {
+        display: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="bg-gradient"></div>
+
+  <!-- LOADING -->
+  <div class="loading-screen" id="loading-screen">
+    <div class="loading-logo">L</div>
+    <div class="loading-brand">Limitless CNC</div>
+    <div class="loading-subtitle">AI-Powered CAM Agent</div>
+    <div class="loading-progress-container">
+      <div class="loading-progress-bar">
+        <div class="loading-progress-fill" id="loading-progress"></div>
+      </div>
+    </div>
+    <ul class="loading-steps">
+      <li class="loading-step" id="ls-wasm"><span class="loading-step-icon">○</span> Loading OpenCascade WASM</li>
+      <li class="loading-step" id="ls-file"><span class="loading-step-icon">○</span> Fetching STEP file</li>
+      <li class="loading-step" id="ls-tess"><span class="loading-step-icon">○</span> Tessellating NURBS geometry</li>
+      <li class="loading-step" id="ls-scene"><span class="loading-step-icon">○</span> Building 3D scene</li>
+      <li class="loading-step" id="ls-ai"><span class="loading-step-icon">○</span> Running AI analysis</li>
+    </ul>
+  </div>
+
+  <!-- DROP OVERLAY -->
+  <div class="drop-overlay" id="drop-overlay">
+    <div class="drop-box" id="drop-box">
+      <div class="drop-icon">📐</div>
+      <div class="drop-title">Drop STEP file to analyze</div>
+      <div class="drop-subtitle">Accepts .stp and .step files</div>
+    </div>
+  </div>
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-left">
+      <div class="logo">L</div>
+      <span class="brand">Limitless CNC</span>
+      <span class="badge">AI Analyzer</span>
+    </div>
+    <div class="header-right">
+      <a class="header-link" href="https://limitlesscnc.ai/" target="_blank">limitlesscnc.ai</a>
+      <a class="header-link" href="https://limitlesscnc.ai/ai-agent/" target="_blank">AI Agent →</a>
+    </div>
+  </header>
+
+  <!-- INFO PANEL -->
+  <div class="panel info-panel" id="info-panel">
+    <h2 id="part-name">4-Pin Connector Plug</h2>
+    <div class="subtitle" id="part-subtitle">STEP AP203 · Precision CNC Component</div>
+    <div class="stat-grid">
+      <div class="stat">
+        <div class="stat-label">Meshes</div>
+        <div class="stat-value" id="stat-meshes">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Faces</div>
+        <div class="stat-value" id="stat-faces">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Vertices</div>
+        <div class="stat-value" id="stat-vertices">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Triangles</div>
+        <div class="stat-value" id="stat-triangles">—</div>
+      </div>
+    </div>
+    <div class="detail-row"><span class="label">File</span><span class="value" id="detail-file">4pinplug.stp</span>
+    </div>
+    <div class="detail-row"><span class="label">Format</span><span class="value">ISO 10303-21</span></div>
+    <div class="detail-row"><span class="label">Units</span><span class="value">Millimeters</span></div>
+    <div class="detail-row" style="border:none;"><span class="label">Engine</span><span class="value">OpenCascade</span>
+    </div>
+  </div>
+
+  <!-- CONTROLS -->
+  <div class="panel controls-panel">
+    <h3>Display</h3>
+    <button class="control-btn active" id="btn-auto-rotate" onclick="toggleAutoRotate()"><span
+        class="control-icon">↻</span>Auto Rotate</button>
+    <button class="control-btn" id="btn-wireframe" onclick="toggleWireframe()"><span
+        class="control-icon">◇</span>Wireframe</button>
+    <button class="control-btn" id="btn-explode" onclick="toggleExplode()"><span
+        class="control-icon">✦</span>Explode</button>
+    <button class="control-btn" id="btn-xray" onclick="toggleXRay()"><span class="control-icon">◎</span>X-Ray</button>
+    <button class="control-btn" id="btn-dims" onclick="toggleDimensions()"><span
+        class="control-icon">📏</span>Dimensions</button>
+    <button class="control-btn" id="btn-cnc" onclick="startCNCSimulation()"><span class="control-icon">⚙</span>CNC
+      Sim</button>
+    <button class="control-btn" id="btn-reset" onclick="resetView()"><span class="control-icon">⟲</span>Reset</button>
+    <div class="camera-section">
+      <h3>Camera</h3>
+      <div class="camera-presets">
+        <button class="camera-btn active" id="cam-overview" onclick="setCameraPreset('overview')">Overview</button>
+        <button class="camera-btn" id="cam-top" onclick="setCameraPreset('top')">Top-Down</button>
+        <button class="camera-btn" id="cam-side" onclick="setCameraPreset('side')">Profile</button>
+        <button class="camera-btn" id="cam-close" onclick="setCameraPreset('close')">Close-Up</button>
+      </div>
+    </div>
+    <div class="color-section">
+      <h3>Material</h3>
+      <div class="color-swatches">
+        <div class="swatch active" style="background:linear-gradient(135deg,#4a9eff,#2563eb);"
+          onclick="setColor(this,0x4a9eff)"></div>
+        <div class="swatch" style="background:linear-gradient(135deg,#c0c0c0,#808080);"
+          onclick="setColor(this,0xc0c0c0)"></div>
+        <div class="swatch" style="background:linear-gradient(135deg,#ffd700,#b8860b);"
+          onclick="setColor(this,0xffd700)"></div>
+        <div class="swatch" style="background:linear-gradient(135deg,#ff6b6b,#c0392b);"
+          onclick="setColor(this,0xff6b6b)"></div>
+        <div class="swatch" style="background:linear-gradient(135deg,#51cf66,#2b8a3e);"
+          onclick="setColor(this,0x51cf66)"></div>
+        <div class="swatch" style="background:linear-gradient(135deg,#cc5de8,#862ae9);"
+          onclick="setColor(this,0xcc5de8)"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI ANALYSIS PANEL -->
+  <div class="panel ai-panel" id="ai-panel">
+    <div class="ai-header">
+      <div class="ai-icon">🧠</div>
+      <div>
+        <div class="ai-title">AI Manufacturing Analysis</div>
+        <div class="ai-subtitle">Limitless CAM Agent v2.4</div>
+      </div>
+      <div class="ai-badge analyzing" id="ai-badge">Analyzing</div>
+    </div>
+    <div class="ai-line" id="ai-0">
+      <div class="ai-line-icon">🔍</div>
+      <div class="ai-line-content">
+        <div class="ai-line-label">Feature Recognition</div>
+        <div class="ai-line-value">Detected <span class="ai-metric">4 cylindrical pin cavities</span> · Ø0.70mm · depth
+          0.30mm</div>
+      </div>
+    </div>
+    <div class="ai-line" id="ai-1">
+      <div class="ai-line-icon">🏗️</div>
+      <div class="ai-line-content">
+        <div class="ai-line-label">Topology</div>
+        <div class="ai-line-value">1 solid body · <span class="ai-metric">23 B-Rep faces</span> · octagonal base +
+          cylindrical pin array</div>
+      </div>
+    </div>
+    <div class="ai-line" id="ai-2">
+      <div class="ai-line-icon">🔧</div>
+      <div class="ai-line-content">
+        <div class="ai-line-label">Material Recommendation</div>
+        <div class="ai-line-value"><span class="ai-highlight">Brass C360</span> (free-cutting, ideal for electrical
+          connectors)</div>
+      </div>
+    </div>
+    <div class="ai-line" id="ai-3">
+      <div class="ai-line-icon">🛤️</div>
+      <div class="ai-line-content">
+        <div class="ai-line-label">Toolpath Strategy</div>
+        <div class="ai-line-value">Helical interpolation (pins) → adaptive clearing (pockets) → face mill (flats)</div>
+      </div>
+    </div>
+    <div class="ai-line" id="ai-4">
+      <div class="ai-line-icon">⚡</div>
+      <div class="ai-line-content">
+        <div class="ai-line-label">Optimal Parameters</div>
+        <div class="ai-line-value">Spindle <span class="ai-metric">12,000 RPM</span> · Feed 200mm/min · DOC 0.05mm · WOC
+          0.35mm</div>
+      </div>
+    </div>
+    <div class="ai-line" id="ai-5">
+      <div class="ai-line-icon">⏱️</div>
+      <div class="ai-line-content">
+        <div class="ai-line-label">Cycle Time</div>
+        <div class="ai-line-value">Estimated <span class="ai-metric">4m 32s</span> vs. manual baseline 8m 45s → <span
+            class="ai-highlight">48% reduction</span></div>
+      </div>
+    </div>
+    <div class="ai-line" id="ai-6">
+      <div class="ai-line-icon">⚠️</div>
+      <div class="ai-line-content">
+        <div class="ai-line-label">Risk Assessment</div>
+        <div class="ai-line-value"><span class="ai-warning">Chatter risk at pin #3</span> — tool overhang L/D > 4:1 →
+          recommend stub-length end mill</div>
+      </div>
+    </div>
+    <div class="ai-line" id="ai-7">
+      <div class="ai-line-icon">✅</div>
+      <div class="ai-line-content">
+        <div class="ai-line-label">Quality Prediction</div>
+        <div class="ai-line-value">Surface finish <span class="ai-highlight">Ra 0.8 µm achievable</span> · all
+          tolerances within ±0.01mm</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CANVAS -->
+  <div id="canvas-container"></div>
+
+  <!-- CNC SIMULATION TIMELINE -->
+  <div class="sim-timeline" id="sim-timeline">
+    <div class="sim-timeline-header">
+      <div class="sim-timeline-title">⚙ CNC Machining Simulation</div>
+      <div class="sim-timeline-phase" id="sim-phase">Initializing</div>
+    </div>
+    <div class="sim-track">
+      <div class="sim-fill" id="sim-fill"></div>
+    </div>
+    <div class="sim-phases">
+      <span id="sp-rough">Roughing</span>
+      <span id="sp-semi">Semi-Finish</span>
+      <span id="sp-finish">Finishing</span>
+    </div>
+    <div class="sim-stats">
+      <div>RPM: <span id="sim-rpm">—</span></div>
+      <div>Feed: <span id="sim-feed">—</span></div>
+      <div>DOC: <span id="sim-doc">—</span></div>
+      <div>Removed: <span id="sim-removed">0%</span></div>
+    </div>
+  </div>
+
+  <!-- HELP & STATUS -->
+  <div class="help-hint" id="help-hint">🖱 Drag to rotate · Scroll to zoom · Right-click to pan · Drop .stp file to load
+  </div>
+  <div class="status-bar">
+    <div><span class="status-dot"></span><span id="status-text">Initializing...</span></div>
+    <div>Powered by OpenCascade WASM + Three.js · Limitless CNC © 2025</div>
+  </div>
+
+  <!-- SCRIPTS -->
+  <script type="importmap">
+  {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/occt-import-js@0.0.23/dist/occt-import-js.js"></script>
+
+  <script type="module">
+    (async function () {
+      const statusEl = document.getElementById('status-text');
+      const loadingEl = document.getElementById('loading-screen');
+
+      function showError(msg) {
+        console.error('FATAL:', msg);
+        statusEl.textContent = 'Error: ' + msg;
+        setTimeout(() => loadingEl.classList.add('hidden'), 1500);
+      }
+
+      try {
+        console.log('[1/6] Importing THREE...');
+        const THREE = await import('three');
+        console.log('[2/6] Importing OrbitControls...');
+        const { OrbitControls } = await import('three/addons/controls/OrbitControls.js');
+        console.log('[3/6] All imports OK');
+
+        // ========== GLOBALS ==========
+        let scene, camera, renderer, controls, labelRenderer;
+        let modelGroup = null, meshes = [], originalPositions = [];
+        let autoRotate = true, wireframeMode = false, explodeMode = false, xrayMode = false;
+        let dimsVisible = false, dimensionLabels = [];
+        let currentColor = 0x4a9eff, cameraAnimating = false;
+        let occtInstance = null, envMap = null;
+        let stockBlock = null, cncSimRunning = false, cncAnimId = null;
+        let CSS2DObject = null;
+
+        // ========== LOADING HELPERS ==========
+        function setStep(id, status) {
+          const el = document.getElementById(id);
+          if (!el) return;
+          const icon = el.querySelector('.loading-step-icon');
+          el.classList.remove('active', 'done');
+          if (status === 'active') { el.classList.add('active'); icon.textContent = '◉'; }
+          else if (status === 'done') { el.classList.add('done'); icon.textContent = '✓'; }
+        }
+        function setProgress(pct) { document.getElementById('loading-progress').style.width = pct + '%'; }
+
+        // ========== INIT SCENE ==========
+        console.log('[4/6] Initializing scene...');
+        const container = document.getElementById('canvas-container');
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.001, 1000);
+        camera.position.set(3, 3, 3);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.4;
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
+
+        // CSS2D Label Renderer for dimensions
+        try {
+          const css2d = await import('three/addons/renderers/CSS2DRenderer.js');
+          const { CSS2DRenderer } = css2d;
+          CSS2DObject = css2d.CSS2DObject;
+          labelRenderer = new CSS2DRenderer();
+          labelRenderer.setSize(window.innerWidth, window.innerHeight);
+          labelRenderer.domElement.style.position = 'absolute';
+          labelRenderer.domElement.style.top = '0';
+          labelRenderer.domElement.style.pointerEvents = 'none';
+          container.appendChild(labelRenderer.domElement);
+          console.log('CSS2D label renderer loaded');
+        } catch (e) { console.warn('CSS2D skipped:', e.message); }
+
+        // HDRI environment (async, non-blocking)
+        try {
+          const pmrem = new THREE.PMREMGenerator(renderer);
+          pmrem.compileEquirectangularShader();
+          const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironment.js');
+          const room = new RoomEnvironment();
+          envMap = pmrem.fromScene(room, 0.04).texture;
+          scene.environment = envMap;
+          room.dispose();
+          console.log('HDRI environment loaded');
+        } catch (e) { console.warn('HDRI skipped:', e.message); }
+
+        controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.06;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 1.2;
+        controls.minDistance = 0.3;
+        controls.maxDistance = 20;
+
+        // Lighting
+        scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+        const mainLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        mainLight.position.set(5, 8, 5);
+        mainLight.castShadow = true;
+        mainLight.shadow.mapSize.set(2048, 2048);
+        scene.add(mainLight);
+        const fillLight = new THREE.DirectionalLight(0x4a9eff, 0.3);
+        fillLight.position.set(-5, 3, -3);
+        scene.add(fillLight);
+        const rimLight = new THREE.DirectionalLight(0x7c3aed, 0.35);
+        rimLight.position.set(0, -2, -5);
+        scene.add(rimLight);
+        const topLight = new THREE.PointLight(0xffffff, 0.4, 20);
+        topLight.position.set(0, 10, 0);
+        scene.add(topLight);
+
+        // Ground
+        const ground = new THREE.Mesh(
+          new THREE.PlaneGeometry(20, 20),
+          new THREE.MeshStandardMaterial({ color: 0x0a0a12, roughness: 0.95, metalness: 0.05, transparent: true, opacity: 0.6 })
+        );
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.y = -2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+        const grid = new THREE.GridHelper(10, 40, 0x161625, 0x161625);
+        grid.position.y = -2;
+        grid.material.opacity = 0.25;
+        grid.material.transparent = true;
+        scene.add(grid);
+
+        // Clipping setup for CNC simulation
+        renderer.localClippingEnabled = true;
+
+        window.addEventListener('resize', () => {
+          camera.aspect = window.innerWidth / window.innerHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(window.innerWidth, window.innerHeight);
+          if (labelRenderer) labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        controls.addEventListener('start', () => document.getElementById('help-hint').classList.add('hidden'));
+
+        console.log('[5/6] Scene initialized');
+
+        // ========== BUILD SCENE ==========
+        function buildScene(result) {
+          modelGroup = new THREE.Group();
+          let totalV = 0, totalT = 0, totalF = 0;
+          for (const md of result.meshes) {
+            const geo = new THREE.BufferGeometry();
+            const verts = new Float32Array(md.attributes.position.array);
+            geo.setAttribute('position', new THREE.BufferAttribute(verts, 3));
+            if (md.attributes.normal) geo.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(md.attributes.normal.array), 3));
+            geo.setIndex(new THREE.BufferAttribute(new Uint32Array(md.index.array), 1));
+            if (!md.attributes.normal) geo.computeVertexNormals();
+            const mat = new THREE.MeshPhysicalMaterial({
+              color: new THREE.Color(currentColor), metalness: 0.75, roughness: 0.18,
+              clearcoat: 0.4, clearcoatRoughness: 0.15, envMapIntensity: envMap ? 1.5 : 0.5, side: THREE.DoubleSide
+            });
+            if (envMap) mat.envMap = envMap;
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.castShadow = true; mesh.receiveShadow = true;
+            modelGroup.add(mesh);
+            meshes.push(mesh);
+            totalV += verts.length / 3;
+            totalT += md.index.array.length / 3;
+            if (md.brep_faces) totalF += md.brep_faces.length;
+          }
+          const box = new THREE.Box3().setFromObject(modelGroup);
+          const center = new THREE.Vector3(); box.getCenter(center);
+          modelGroup.position.sub(center);
+          const size = new THREE.Vector3(); box.getSize(size);
+          modelGroup.scale.setScalar(3 / Math.max(size.x, size.y, size.z));
+          scene.add(modelGroup);
+          meshes.forEach(m => originalPositions.push(m.position.clone()));
+          controls.target.set(0, 0, 0);
+          camera.position.set(2.5, 2, 2.5);
+          controls.update();
+          document.getElementById('stat-meshes').textContent = result.meshes.length;
+          document.getElementById('stat-faces').textContent = totalF;
+          document.getElementById('stat-vertices').textContent = totalV.toLocaleString();
+          document.getElementById('stat-triangles').textContent = totalT.toLocaleString();
+          createDimensionLabels();
+        }
+
+        // ========== AI ANALYSIS ==========
+        function runAIAnalysis() {
+          const badge = document.getElementById('ai-badge');
+          badge.textContent = 'Analyzing'; badge.className = 'ai-badge analyzing';
+          const lines = document.querySelectorAll('.ai-line');
+          lines.forEach(l => l.classList.remove('visible'));
+          let i = 0;
+          const iv = setInterval(() => {
+            if (i < lines.length) { lines[i].classList.add('visible'); i++; }
+            else { clearInterval(iv); badge.textContent = 'Complete'; badge.className = 'ai-badge complete'; }
+          }, 900);
+        }
+
+        // ========== CAMERA PRESETS ==========
+        const presets = {
+          overview: { pos: [2.5, 2, 2.5], look: [0, 0, 0] },
+          top: { pos: [0, 4.5, 0.01], look: [0, 0, 0] },
+          side: { pos: [4, 0.3, 0], look: [0, 0, 0] },
+          close: { pos: [0.8, 0.4, 0.8], look: [0, 0.2, 0] }
+        };
+        function animateCamera(tp, tl, dur) {
+          dur = dur || 1500;
+          cameraAnimating = true;
+          controls.autoRotate = false;
+          const sp = camera.position.clone(), sl = controls.target.clone();
+          const ep = new THREE.Vector3(tp[0], tp[1], tp[2]);
+          const el = new THREE.Vector3(tl[0], tl[1], tl[2]);
+          const t0 = performance.now();
+          function step(now) {
+            const t = Math.min((now - t0) / dur, 1);
+            const e = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+            camera.position.lerpVectors(sp, ep, e);
+            controls.target.lerpVectors(sl, el, e);
+            controls.update();
+            if (t < 1) requestAnimationFrame(step);
+            else { cameraAnimating = false; if (autoRotate) controls.autoRotate = true; }
+          }
+          requestAnimationFrame(step);
+        }
+        window.setCameraPreset = function (name) {
+          const p = presets[name]; if (!p) return;
+          animateCamera(p.pos, p.look);
+          document.querySelectorAll('.camera-btn').forEach(function (b) { b.classList.remove('active'); });
+          var el = document.getElementById('cam-' + name); if (el) el.classList.add('active');
+        };
+
+        // ========== ANIMATION LOOP ==========
+        function animate() {
+          requestAnimationFrame(animate);
+          if (!cameraAnimating) controls.update();
+          renderer.render(scene, camera);
+          if (labelRenderer) labelRenderer.render(scene, camera);
+        }
+
+        // ========== CONTROLS ==========
+        window.toggleAutoRotate = function () {
+          autoRotate = !autoRotate; controls.autoRotate = autoRotate;
+          document.getElementById('btn-auto-rotate').classList.toggle('active', autoRotate);
+        };
+        window.toggleWireframe = function () {
+          wireframeMode = !wireframeMode;
+          meshes.forEach(function (m) { m.material.wireframe = wireframeMode; });
+          document.getElementById('btn-wireframe').classList.toggle('active', wireframeMode);
+        };
+        window.toggleExplode = function () {
+          explodeMode = !explodeMode;
+          document.getElementById('btn-explode').classList.toggle('active', explodeMode);
+          if (!modelGroup) return;
+          meshes.forEach(function (mesh, i) {
+            if (explodeMode) {
+              var mb = new THREE.Box3().setFromObject(mesh);
+              var mc = new THREE.Vector3(); mb.getCenter(mc);
+              var dir = mc.normalize();
+              mesh.position.copy(originalPositions[i].clone().add(dir.multiplyScalar(0.5)));
+            } else { mesh.position.copy(originalPositions[i]); }
+          });
+        };
+        window.toggleXRay = function () {
+          xrayMode = !xrayMode;
+          meshes.forEach(function (m) { m.material.transparent = xrayMode; m.material.opacity = xrayMode ? 0.25 : 1; m.material.depthWrite = !xrayMode; });
+          document.getElementById('btn-xray').classList.toggle('active', xrayMode);
+        };
+        // ========== DIMENSION ANNOTATIONS ==========
+        function createDimensionLabels() {
+          if (!CSS2DObject || !modelGroup) return;
+          const dims = [
+            { text: 'Ø 0.70mm', pos: [0, 0.6, 0], color: '#4da6ff' },
+            { text: 'Ø 0.84mm outer', pos: [0, -0.6, 0], color: '#7c3aed' },
+            { text: '↕ depth 0.30mm', pos: [1.2, 0, 0], color: '#00c896' },
+            { text: '4× Pin Array', pos: [-1.2, 0.2, 0], color: '#f59e0b' },
+          ];
+          dims.forEach(function (d) {
+            var div = document.createElement('div');
+            div.className = 'dim-label';
+            div.style.color = d.color;
+            div.style.border = '1px solid ' + d.color + '40';
+            div.textContent = d.text;
+            var label = new CSS2DObject(div);
+            label.position.set(d.pos[0], d.pos[1], d.pos[2]);
+            label.visible = false;
+            modelGroup.add(label);
+            dimensionLabels.push(label);
+          });
+        }
+        window.toggleDimensions = function () {
+          dimsVisible = !dimsVisible;
+          dimensionLabels.forEach(function (l) { l.visible = dimsVisible; });
+          document.getElementById('btn-dims').classList.toggle('active', dimsVisible);
+        };
+
+        // ========== CNC MACHINING SIMULATION ==========
+        window.startCNCSimulation = function () {
+          if (cncSimRunning) { stopCNCSimulation(); return; }
+          if (!modelGroup || meshes.length === 0) return;
+
+          // Reset view modes
+          if (wireframeMode) window.toggleWireframe();
+          if (explodeMode) window.toggleExplode();
+          if (xrayMode) window.toggleXRay();
+
+          cncSimRunning = true;
+          document.getElementById('btn-cnc').classList.add('active');
+          document.getElementById('sim-timeline').classList.add('visible');
+          controls.autoRotate = true;
+          controls.autoRotateSpeed = 2.0;
+
+          // Create raw stock block (bounding box)
+          if (stockBlock) { scene.remove(stockBlock); stockBlock.geometry.dispose(); stockBlock.material.dispose(); }
+          var box = new THREE.Box3().setFromObject(modelGroup);
+          var size = new THREE.Vector3(); box.getSize(size);
+          var center = new THREE.Vector3(); box.getCenter(center);
+          // Make stock slightly larger
+          var stockGeo = new THREE.BoxGeometry(size.x * 1.3, size.y * 1.3, size.z * 1.3);
+          var stockMat = new THREE.MeshPhysicalMaterial({
+            color: 0xb8860b, metalness: 0.6, roughness: 0.35,
+            transparent: true, opacity: 0.4, side: THREE.DoubleSide,
+            depthWrite: false
+          });
+          if (envMap) stockMat.envMap = envMap;
+          stockBlock = new THREE.Mesh(stockGeo, stockMat);
+          stockBlock.position.copy(center);
+          scene.add(stockBlock);
+
+          // Create clipping planes
+          var clipTop = new THREE.Plane(new THREE.Vector3(0, -1, 0), size.y * 2);
+          var clipFront = new THREE.Plane(new THREE.Vector3(0, 0, -1), size.z * 2);
+          var clipSide = new THREE.Plane(new THREE.Vector3(-1, 0, 0), size.x * 2);
+
+          // Apply clipping to STOCK (not to the part — the part is always fully visible)
+          stockBlock.material.clippingPlanes = [clipTop, clipFront, clipSide];
+
+          // Simulation phases
+          var phases = [
+            { name: 'Roughing', rpm: '8,000', feed: '400mm/min', doc: '0.50mm', dur: 4000, clip: clipTop, from: size.y * 2, to: size.y * 0.65 },
+            { name: 'Semi-Finish', rpm: '10,000', feed: '250mm/min', doc: '0.15mm', dur: 3000, clip: clipFront, from: size.z * 2, to: size.z * 0.65 },
+            { name: 'Finishing', rpm: '12,000', feed: '200mm/min', doc: '0.05mm', dur: 3500, clip: clipSide, from: size.x * 2, to: size.x * 0.65 },
+          ];
+
+          var phaseLabels = ['sp-rough', 'sp-semi', 'sp-finish'];
+          var totalDur = phases.reduce(function (s, p) { return s + p.dur; }, 0);
+          var simStart = performance.now();
+
+          function simStep(now) {
+            if (!cncSimRunning) return;
+            var elapsed = now - simStart;
+            var totalPct = Math.min(elapsed / totalDur, 1);
+
+            // Update overall progress
+            document.getElementById('sim-fill').style.width = (totalPct * 100) + '%';
+            document.getElementById('sim-removed').textContent = Math.round(totalPct * 100) + '%';
+
+            // Stock block fades as material is removed
+            stockBlock.material.opacity = 0.4 * (1 - totalPct * 0.8);
+
+            // Determine current phase
+            var accum = 0;
+            for (var pi = 0; pi < phases.length; pi++) {
+              var p = phases[pi];
+              if (elapsed < accum + p.dur) {
+                // In this phase
+                var phaseT = (elapsed - accum) / p.dur;
+                p.clip.constant = p.from + (p.to - p.from) * phaseT;
+
+                document.getElementById('sim-phase').textContent = p.name;
+                document.getElementById('sim-rpm').textContent = p.rpm;
+                document.getElementById('sim-feed').textContent = p.feed;
+                document.getElementById('sim-doc').textContent = p.doc;
+
+                // Update phase labels
+                phaseLabels.forEach(function (id, idx) {
+                  var el = document.getElementById(id);
+                  el.className = idx < pi ? 'done' : idx === pi ? 'active' : '';
+                });
+                break;
+              }
+              accum += p.dur;
+              // Snap completed phases
+              p.clip.constant = p.to;
+            }
+
+            if (totalPct < 1) {
+              cncAnimId = requestAnimationFrame(simStep);
+            } else {
+              // Simulation complete
+              phaseLabels.forEach(function (id) { document.getElementById(id).className = 'done'; });
+              document.getElementById('sim-phase').textContent = 'Complete ✓';
+              document.getElementById('sim-phase').style.color = 'var(--green)';
+              // Fade out stock block
+              var fadeStart = performance.now();
+              function fadeStock(now) {
+                var t = Math.min((now - fadeStart) / 1000, 1);
+                stockBlock.material.opacity = 0.08 * (1 - t);
+                if (t < 1) requestAnimationFrame(fadeStock);
+                else { scene.remove(stockBlock); stockBlock.geometry.dispose(); stockBlock.material.dispose(); stockBlock = null; }
+              }
+              requestAnimationFrame(fadeStock);
+            }
+          }
+          cncAnimId = requestAnimationFrame(simStep);
+        };
+
+        function stopCNCSimulation() {
+          cncSimRunning = false;
+          if (cncAnimId) cancelAnimationFrame(cncAnimId);
+          document.getElementById('btn-cnc').classList.remove('active');
+          document.getElementById('sim-timeline').classList.remove('visible');
+          document.getElementById('sim-phase').style.color = '';
+          if (stockBlock) {
+            // Remove clipping from stock
+            stockBlock.material.clippingPlanes = [];
+            scene.remove(stockBlock); stockBlock.geometry.dispose(); stockBlock.material.dispose(); stockBlock = null;
+          }
+          controls.autoRotateSpeed = 1.2;
+        }
+
+        window.resetView = function () {
+          if (cncSimRunning) stopCNCSimulation();
+          animateCamera([2.5, 2, 2.5], [0, 0, 0]);
+          if (wireframeMode) window.toggleWireframe();
+          if (explodeMode) window.toggleExplode();
+          if (xrayMode) window.toggleXRay();
+          if (dimsVisible) window.toggleDimensions();
+          if (!autoRotate) window.toggleAutoRotate();
+          document.querySelectorAll('.camera-btn').forEach(function (b) { b.classList.remove('active'); });
+          document.getElementById('cam-overview').classList.add('active');
+        };
+        window.setColor = function (el, color) {
+          currentColor = color;
+          document.querySelectorAll('.swatch').forEach(function (s) { s.classList.remove('active'); });
+          el.classList.add('active');
+          meshes.forEach(function (m) { m.material.color.setHex(color); });
+        };
+
+        // ========== CLEAR SCENE ==========
+        function clearScene() {
+          if (modelGroup) {
+            scene.remove(modelGroup);
+            modelGroup.traverse(function (c) { if (c.geometry) c.geometry.dispose(); if (c.material) c.material.dispose(); });
+          }
+          meshes = []; originalPositions = []; modelGroup = null;
+          wireframeMode = false; explodeMode = false; xrayMode = false;
+          document.querySelectorAll('.control-btn').forEach(function (b) { b.classList.remove('active'); });
+          document.getElementById('btn-auto-rotate').classList.add('active');
+        }
+
+        // ========== LOAD STEP ==========
+        async function loadStepFile(fileBuffer, fileName) {
+          try {
+            if (!occtInstance) {
+              setStep('ls-wasm', 'active'); setProgress(10);
+              console.log('Initializing WASM...');
+              occtInstance = await occtimportjs();
+              console.log('WASM ready');
+              setStep('ls-wasm', 'done'); setProgress(30);
+            }
+            if (!fileBuffer) {
+              setStep('ls-file', 'active'); setProgress(40);
+              console.log('Fetching STP...');
+              var resp = await fetch('4pinplug.stp');
+              if (!resp.ok) throw new Error('Fetch failed: ' + resp.status);
+              fileBuffer = new Uint8Array(await resp.arrayBuffer());
+              fileName = '4pinplug.stp';
+              console.log('STP fetched:', fileBuffer.byteLength, 'bytes');
+              setStep('ls-file', 'done'); setProgress(50);
+            }
+            setStep('ls-tess', 'active'); setProgress(60);
+            console.log('Tessellating...');
+            var result = occtInstance.ReadStepFile(fileBuffer, {
+              linearUnit: 'millimeter', linearDeflection: 0.005, angularDeflection: 0.3
+            });
+            if (!result.success) throw new Error('STEP parse failed');
+            console.log('Tessellation done:', result.meshes.length, 'meshes');
+            setStep('ls-tess', 'done'); setProgress(75);
+
+            setStep('ls-scene', 'active'); setProgress(80);
+            clearScene();
+            buildScene(result);
+            if (fileName) document.getElementById('detail-file').textContent = fileName;
+            setStep('ls-scene', 'done'); setProgress(90);
+
+            setStep('ls-ai', 'active'); setProgress(95);
+            setTimeout(function () {
+              setStep('ls-ai', 'done'); setProgress(100);
+              runAIAnalysis();
+              setTimeout(function () {
+                loadingEl.classList.add('hidden');
+                statusEl.textContent = 'Model loaded · AI analysis complete';
+              }, 400);
+            }, 600);
+          } catch (err) {
+            console.error('Load error:', err);
+            showError(err.message);
+          }
+        }
+
+        // ========== DRAG & DROP ==========
+        var dragCounter = 0;
+        window.addEventListener('dragenter', function (e) { e.preventDefault(); dragCounter++; document.getElementById('drop-overlay').classList.add('visible'); });
+        window.addEventListener('dragleave', function (e) { e.preventDefault(); dragCounter--; if (dragCounter <= 0) { document.getElementById('drop-overlay').classList.remove('visible'); dragCounter = 0; } });
+        window.addEventListener('dragover', function (e) { e.preventDefault(); document.getElementById('drop-box').classList.add('hover'); });
+        window.addEventListener('drop', async function (e) {
+          e.preventDefault(); dragCounter = 0;
+          document.getElementById('drop-overlay').classList.remove('visible');
+          document.getElementById('drop-box').classList.remove('hover');
+          var file = e.dataTransfer.files[0];
+          if (!file) return;
+          var name = file.name.toLowerCase();
+          if (!name.endsWith('.stp') && !name.endsWith('.step')) { alert('Please drop a .stp or .step file'); return; }
+          loadingEl.classList.remove('hidden');
+          ['ls-wasm', 'ls-file', 'ls-tess', 'ls-scene', 'ls-ai'].forEach(function (id) {
+            var el = document.getElementById(id); el.classList.remove('active', 'done'); el.querySelector('.loading-step-icon').textContent = '○';
+          });
+          setStep('ls-wasm', 'done'); setStep('ls-file', 'active'); setProgress(40);
+          var buf = await file.arrayBuffer();
+          setStep('ls-file', 'done'); setProgress(50);
+          document.getElementById('part-name').textContent = file.name.replace(/\.\w+$/, '');
+          document.getElementById('part-subtitle').textContent = 'STEP · Uploaded Part';
+          await loadStepFile(new Uint8Array(buf), file.name);
+        });
+
+        // ========== BOOT ==========
+        console.log('[6/6] Starting animation loop and loading STEP file...');
+        animate();
+        await loadStepFile();
+        setTimeout(function () { document.getElementById('help-hint').classList.add('hidden'); }, 10000);
+
+      } catch (e) {
+        showError(e.message || String(e));
+      }
+    })();
+  </script>
+</body>
+
+</html>
