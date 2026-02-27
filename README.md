@@ -2,7 +2,7 @@
 
 Interactive 3D viewer for CNC machining analysis. Upload any STEP file and get instant AI manufacturing insights.
 
-**[🔗 Live Demo](https://yonatanbitton.github.io/limitless-cnc-viewer/)**
+**[🔗 Live Demo](https://yonatanbitton.github.io/cnc-viewer/)**
 
 ![Viewer Screenshot](screenshot.png)
 
