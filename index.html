@@ -707,94 +707,139 @@
       opacity: 0;
     }
 
-    /* CNC SIMULATION TIMELINE */
-    .sim-timeline {
+    /* CNC SIMULATION HUD */
+    .cnc-hud {
       position: fixed;
-      bottom: 42px;
+      top: 50%;
       left: 50%;
-      transform: translateX(-50%);
-      z-index: 150;
-      background: var(--surface);
-      backdrop-filter: blur(24px);
+      transform: translate(-50%, -50%);
+      width: 700px;
+      height: 420px;
+      background: rgba(15, 15, 20, 0.95);
+      border: 1px solid var(--accent);
       border-radius: 12px;
-      border: 1px solid var(--border);
-      padding: 14px 24px;
-      width: 500px;
+      box-shadow: 0 0 40px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(74, 158, 255, 0.2) inset;
+      z-index: 200;
       display: none;
       flex-direction: column;
-      gap: 10px;
+      overflow: hidden;
+      backdrop-filter: blur(20px);
     }
 
-    .sim-timeline.visible {
+    .cnc-hud.visible {
       display: flex;
     }
 
-    .sim-timeline-header {
+    .cnc-hud-header {
+      padding: 12px 20px;
+      background: rgba(255, 255, 255, 0.05);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
       display: flex;
       align-items: center;
       justify-content: space-between;
-    }
-
-    .sim-timeline-title {
-      font-size: 11px;
-      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
       color: #fff;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .sim-timeline-phase {
-      font-size: 10px;
       font-weight: 600;
-      color: var(--amber);
-      text-transform: uppercase;
       letter-spacing: 0.5px;
     }
 
-    .sim-track {
-      height: 4px;
-      background: rgba(255, 255, 255, 0.06);
-      border-radius: 2px;
-      overflow: hidden;
+    .cnc-hud-close {
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 18px;
+      cursor: pointer;
+      opacity: 0.5;
     }
 
-    .sim-fill {
+    .cnc-hud-close:hover {
+      opacity: 1;
+    }
+
+    .cnc-title-wrap {
+      display: flex;
+      align-items: center;
+    }
+
+    .cnc-pulse {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--green);
+      margin-right: 12px;
+      box-shadow: 0 0 10px var(--green);
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+      0% {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      50% {
+        opacity: 0.5;
+        transform: scale(0.8);
+      }
+
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    .cnc-hud-body {
+      display: flex;
+      flex: 1;
+      gap: 0;
+    }
+
+    .cnc-vis {
+      flex: 1;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-right: 1px solid rgba(255, 255, 255, 0.1);
+      background: #111;
+      position: relative;
+    }
+
+    .cnc-vis svg {
+      width: 100%;
       height: 100%;
-      width: 0%;
-      border-radius: 2px;
-      background: linear-gradient(90deg, var(--accent), var(--green));
-      transition: width 0.1s linear;
+      max-height: 380px;
+      filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.5));
+      border-radius: 4px;
     }
 
-    .sim-phases {
-      display: flex;
-      justify-content: space-between;
-      font-size: 9px;
-      color: rgba(255, 255, 255, 0.3);
+    .cnc-gcode {
+      width: 280px;
+      background: #0a0a0f;
+      padding: 16px;
+      overflow: hidden;
       font-family: 'JetBrains Mono', monospace;
-    }
-
-    .sim-phases span.active {
-      color: var(--amber);
-      font-weight: 600;
-    }
-
-    .sim-phases span.done {
-      color: var(--green);
-    }
-
-    .sim-stats {
+      font-size: 11px;
+      color: #4da6ff;
       display: flex;
-      gap: 16px;
-      font-size: 10px;
-      color: rgba(255, 255, 255, 0.4);
-      font-family: 'JetBrains Mono', monospace;
+      flex-direction: column;
+      gap: 4px;
+      justify-content: flex-end;
     }
 
-    .sim-stats span {
-      color: var(--accent);
-      font-weight: 500;
+    .cnc-gcode span {
+      opacity: 0.8;
+      white-space: pre;
+    }
+
+    .cnc-gcode span:last-child {
+      color: #fff;
+      opacity: 1;
+      font-weight: 700;
+      background: rgba(74, 158, 255, 0.2);
+      padding-left: 4px;
+      border-left: 2px solid var(--accent);
     }
 
     /* DIMENSION LABELS */
@@ -1023,25 +1068,68 @@
   <!-- CANVAS -->
   <div id="canvas-container"></div>
 
-  <!-- CNC SIMULATION TIMELINE -->
-  <div class="sim-timeline" id="sim-timeline">
-    <div class="sim-timeline-header">
-      <div class="sim-timeline-title">⚙ CNC Machining Simulation</div>
-      <div class="sim-timeline-phase" id="sim-phase">Initializing</div>
+  <!-- CNC SIMULATION HUD -->
+  <div class="cnc-hud" id="cnc-hud">
+    <div class="cnc-hud-header">
+      <div class="cnc-title-wrap">
+        <div class="cnc-pulse"></div> CAM SIMULATION: G-Code Toolpath Generation
+      </div>
+      <button class="cnc-hud-close" onclick="stopCNCSimulation()">✕</button>
     </div>
-    <div class="sim-track">
-      <div class="sim-fill" id="sim-fill"></div>
-    </div>
-    <div class="sim-phases">
-      <span id="sp-rough">Roughing</span>
-      <span id="sp-semi">Semi-Finish</span>
-      <span id="sp-finish">Finishing</span>
-    </div>
-    <div class="sim-stats">
-      <div>RPM: <span id="sim-rpm">—</span></div>
-      <div>Feed: <span id="sim-feed">—</span></div>
-      <div>DOC: <span id="sim-doc">—</span></div>
-      <div>Removed: <span id="sim-removed">0%</span></div>
+    <div class="cnc-hud-body">
+      <div class="cnc-vis">
+        <svg viewBox="0 0 400 400" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <linearGradient id="alu" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#eeeeee" />
+              <stop offset="50%" stop-color="#bbbbbb" />
+              <stop offset="100%" stop-color="#888888" />
+            </linearGradient>
+            <linearGradient id="brass" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#fff176" />
+              <stop offset="50%" stop-color="#fbc02d" />
+              <stop offset="100%" stop-color="#f57f17" />
+            </linearGradient>
+            <mask id="mill-mask">
+              <rect width="400" height="400" fill="white" />
+              <path id="svg-toolpath"
+                d="M 20,20 L 380,20 L 380,380 L 20,380 L 20,60 L 340,60 L 340,340 L 60,340 L 60,100 L 300,100 L 300,300 L 100,300 L 100,140 L 260,140 L 260,260 L 140,260 L 140,180 L 220,180 L 220,220 L 180,220 M 160,160 a 5,5 0 1,0 10,0 a 5,5 0 1,0 -10,0 M 240,160 a 5,5 0 1,0 10,0 a 5,5 0 1,0 -10,0 M 160,240 a 5,5 0 1,0 10,0 a 5,5 0 1,0 -10,0 M 240,240 a 5,5 0 1,0 10,0 a 5,5 0 1,0 -10,0 M 200,200 a 50,50 0 1,0 100,0 a 50,50 0 1,0 -100,0"
+                fill="none" stroke="black" stroke-width="40" stroke-linecap="round" stroke-linejoin="round" />
+            </mask>
+          </defs>
+
+          <!-- Background: Cool grid pattern -->
+          <rect width="400" height="400" fill="#1e1e24" />
+          <path d="M0,100 L400,100 M0,200 L400,200 M0,300 L400,300 M100,0 L100,400 M200,0 L200,400 M300,0 L300,400"
+            stroke="rgba(255,255,255,0.05)" stroke-width="2" />
+
+          <!-- The Revealed Finished Part (Brass) -->
+          <g>
+            <polygon points="120,60 280,60 340,120 340,280 280,340 120,340 60,280 60,120" fill="url(#brass)" />
+            <circle cx="200" cy="200" r="100" fill="url(#brass)" stroke="#f57f17" stroke-width="4" />
+            <circle cx="200" cy="200" r="50" fill="#fff59d" stroke="#fbc02d" stroke-width="2" />
+            <circle cx="160" cy="160" r="10" fill="#222" />
+            <circle cx="240" cy="160" r="10" fill="#222" />
+            <circle cx="160" cy="240" r="10" fill="#222" />
+            <circle cx="240" cy="240" r="10" fill="#222" />
+          </g>
+
+          <!-- The Stock overlay being masked away -->
+          <!-- We shrink it slightly to show the 'clamp' border area? No, full size -->
+          <rect width="360" height="360" x="20" y="20" fill="url(#alu)" mask="url(#mill-mask)" rx="10" />
+
+          <!-- Toolhead -->
+          <g id="svg-toolhead" transform="translate(20,20)">
+            <circle cx="0" cy="0" r="20" fill="rgba(255,50,50,0.2)" />
+            <circle cx="0" cy="0" r="8" fill="#ff3333" />
+            <line x1="-8" y1="0" x2="8" y2="0" stroke="#fff" stroke-width="2" />
+            <line x1="0" y1="-8" x2="0" y2="8" stroke="#fff" stroke-width="2" />
+          </g>
+        </svg>
+      </div>
+      <div class="cnc-gcode" id="cnc-gcode-container">
+        <!-- populated by JS -->
+      </div>
     </div>
   </div>
 
@@ -1344,130 +1432,112 @@
           document.getElementById('btn-dims').classList.toggle('active', dimsVisible);
         };
 
-        // ========== CNC MACHINING SIMULATION ==========
+        // ========== ANIMATED SVG CNC SIMULATION ==========
         window.startCNCSimulation = function () {
-          if (cncSimRunning) { stopCNCSimulation(); return; }
-          if (!modelGroup || meshes.length === 0) return;
+          if (cncSimRunning) return;
+          cncSimRunning = true;
 
-          // Reset view modes
+          // Close other modes
           if (wireframeMode) window.toggleWireframe();
           if (explodeMode) window.toggleExplode();
           if (xrayMode) window.toggleXRay();
+          if (dimsVisible) window.toggleDimensions();
 
-          cncSimRunning = true;
           document.getElementById('btn-cnc').classList.add('active');
-          document.getElementById('sim-timeline').classList.add('visible');
+          document.getElementById('cnc-hud').classList.add('visible');
+
+          // Background 3D scene becomes a subtle wireframe blueprint
+          if (modelGroup) {
+            meshes.forEach(function (m) {
+              m.material.transparent = true;
+              m.material.opacity = 0.15;
+              m.material.wireframe = true;
+              m.material.color.setHex(0x4da6ff);
+            });
+          }
           controls.autoRotate = true;
-          controls.autoRotateSpeed = 2.0;
+          controls.autoRotateSpeed = 0.5; // Slow ambient rotation
 
-          // Create raw stock block (bounding box)
-          if (stockBlock) { scene.remove(stockBlock); stockBlock.geometry.dispose(); stockBlock.material.dispose(); }
-          var box = new THREE.Box3().setFromObject(modelGroup);
-          var size = new THREE.Vector3(); box.getSize(size);
-          var center = new THREE.Vector3(); box.getCenter(center);
-          // Make stock slightly larger
-          var stockGeo = new THREE.BoxGeometry(size.x * 1.3, size.y * 1.3, size.z * 1.3);
-          var stockMat = new THREE.MeshPhysicalMaterial({
-            color: 0xb8860b, metalness: 0.6, roughness: 0.35,
-            transparent: true, opacity: 0.4, side: THREE.DoubleSide,
-            depthWrite: false
-          });
-          if (envMap) stockMat.envMap = envMap;
-          stockBlock = new THREE.Mesh(stockGeo, stockMat);
-          stockBlock.position.copy(center);
-          scene.add(stockBlock);
+          // Init SVG Animation
+          var path = document.getElementById('svg-toolpath');
+          var head = document.getElementById('svg-toolhead');
+          var gcode = document.getElementById('cnc-gcode-container');
 
-          // Create clipping planes
-          var clipTop = new THREE.Plane(new THREE.Vector3(0, -1, 0), size.y * 2);
-          var clipFront = new THREE.Plane(new THREE.Vector3(0, 0, -1), size.z * 2);
-          var clipSide = new THREE.Plane(new THREE.Vector3(-1, 0, 0), size.x * 2);
+          var len = path.getTotalLength();
+          path.style.strokeDasharray = len;
+          path.style.strokeDashoffset = len;
+          gcode.innerHTML = '';
 
-          // Apply clipping to STOCK (not to the part — the part is always fully visible)
-          stockBlock.material.clippingPlanes = [clipTop, clipFront, clipSide];
+          var startTime = performance.now();
+          var duration = 12000; // 12 seconds simulation
+          var lineNum = 100;
+          var lastPt = { x: 0, y: 0 };
 
-          // Simulation phases
-          var phases = [
-            { name: 'Roughing', rpm: '8,000', feed: '400mm/min', doc: '0.50mm', dur: 4000, clip: clipTop, from: size.y * 2, to: size.y * 0.65 },
-            { name: 'Semi-Finish', rpm: '10,000', feed: '250mm/min', doc: '0.15mm', dur: 3000, clip: clipFront, from: size.z * 2, to: size.z * 0.65 },
-            { name: 'Finishing', rpm: '12,000', feed: '200mm/min', doc: '0.05mm', dur: 3500, clip: clipSide, from: size.x * 2, to: size.x * 0.65 },
-          ];
-
-          var phaseLabels = ['sp-rough', 'sp-semi', 'sp-finish'];
-          var totalDur = phases.reduce(function (s, p) { return s + p.dur; }, 0);
-          var simStart = performance.now();
-
-          function simStep(now) {
+          function animStep(now) {
             if (!cncSimRunning) return;
-            var elapsed = now - simStart;
-            var totalPct = Math.min(elapsed / totalDur, 1);
+            var elapsed = now - startTime;
+            var t = Math.min(elapsed / duration, 1);
 
-            // Update overall progress
-            document.getElementById('sim-fill').style.width = (totalPct * 100) + '%';
-            document.getElementById('sim-removed').textContent = Math.round(totalPct * 100) + '%';
+            // Ease out quad
+            var easeT = t * (2 - t);
+            var currentLen = easeT * len;
+            path.style.strokeDashoffset = len - currentLen;
 
-            // Stock block fades as material is removed
-            stockBlock.material.opacity = 0.4 * (1 - totalPct * 0.8);
+            var pt = path.getPointAtLength(currentLen);
+            head.setAttribute('transform', 'translate(' + pt.x + ',' + pt.y + ') rotate(' + (elapsed * 0.5) + ')');
 
-            // Determine current phase
-            var accum = 0;
-            for (var pi = 0; pi < phases.length; pi++) {
-              var p = phases[pi];
-              if (elapsed < accum + p.dur) {
-                // In this phase
-                var phaseT = (elapsed - accum) / p.dur;
-                p.clip.constant = p.from + (p.to - p.from) * phaseT;
+            // Generate G-code lines as we move
+            var dist = Math.hypot(pt.x - lastPt.x, pt.y - lastPt.y);
+            if (dist > 5 || Math.random() < 0.05) {
+              lastPt = pt;
+              var isRapid = Math.random() < 0.1;
+              var cmd = isRapid ? 'G00' : 'G01';
+              var xStr = (pt.x * 0.25).toFixed(3);
+              var yStr = (pt.y * 0.25).toFixed(3);
+              var fStr = (isRapid ? 800 : Math.round(150 + Math.random() * 50));
+              var txt = 'N' + lineNum + ' ' + cmd + ' X' + xStr + ' Y' + yStr + ' Z-2.500 F' + fStr;
 
-                document.getElementById('sim-phase').textContent = p.name;
-                document.getElementById('sim-rpm').textContent = p.rpm;
-                document.getElementById('sim-feed').textContent = p.feed;
-                document.getElementById('sim-doc').textContent = p.doc;
-
-                // Update phase labels
-                phaseLabels.forEach(function (id, idx) {
-                  var el = document.getElementById(id);
-                  el.className = idx < pi ? 'done' : idx === pi ? 'active' : '';
-                });
-                break;
-              }
-              accum += p.dur;
-              // Snap completed phases
-              p.clip.constant = p.to;
+              var span = document.createElement('span');
+              span.textContent = txt;
+              gcode.appendChild(span);
+              if (gcode.children.length > 20) gcode.removeChild(gcode.firstChild);
+              lineNum += 10;
             }
 
-            if (totalPct < 1) {
-              cncAnimId = requestAnimationFrame(simStep);
+            if (t < 1) {
+              cncAnimId = requestAnimationFrame(animStep);
             } else {
-              // Simulation complete
-              phaseLabels.forEach(function (id) { document.getElementById(id).className = 'done'; });
-              document.getElementById('sim-phase').textContent = 'Complete ✓';
-              document.getElementById('sim-phase').style.color = 'var(--green)';
-              // Fade out stock block
-              var fadeStart = performance.now();
-              function fadeStock(now) {
-                var t = Math.min((now - fadeStart) / 1000, 1);
-                stockBlock.material.opacity = 0.08 * (1 - t);
-                if (t < 1) requestAnimationFrame(fadeStock);
-                else { scene.remove(stockBlock); stockBlock.geometry.dispose(); stockBlock.material.dispose(); stockBlock = null; }
-              }
-              requestAnimationFrame(fadeStock);
+              var done = document.createElement('span');
+              done.textContent = 'M30 ; END OF PROGRAM';
+              done.style.color = 'var(--green)';
+              gcode.appendChild(done);
+
+              // Flash success and auto-close
+              setTimeout(stopCNCSimulation, 2500);
             }
           }
-          cncAnimId = requestAnimationFrame(simStep);
+          cncAnimId = requestAnimationFrame(animStep);
         };
 
-        function stopCNCSimulation() {
+        window.stopCNCSimulation = function () {
+          if (!cncSimRunning) return;
           cncSimRunning = false;
           if (cncAnimId) cancelAnimationFrame(cncAnimId);
+
+          document.getElementById('cnc-hud').classList.remove('visible');
           document.getElementById('btn-cnc').classList.remove('active');
-          document.getElementById('sim-timeline').classList.remove('visible');
-          document.getElementById('sim-phase').style.color = '';
-          if (stockBlock) {
-            // Remove clipping from stock
-            stockBlock.material.clippingPlanes = [];
-            scene.remove(stockBlock); stockBlock.geometry.dispose(); stockBlock.material.dispose(); stockBlock = null;
+
+          // Restore 3D Scene
+          if (modelGroup) {
+            meshes.forEach(function (m) {
+              m.material.transparent = xrayMode;
+              m.material.opacity = xrayMode ? 0.25 : 1;
+              m.material.wireframe = wireframeMode;
+              m.material.color.setHex(currentColor);
+            });
           }
           controls.autoRotateSpeed = 1.2;
-        }
+        };
 
         window.resetView = function () {
           if (cncSimRunning) stopCNCSimulation();
