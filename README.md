@@ -52,4 +52,4 @@ This allows Gemini to look at an STP file not as an image, but as a structured l
 
 ## About
 
-Built as an AI CAM Agent that integrates with NX-CAM to automate CNC programming.
+Built as an interactive, strictly client-side 3D STP viewer for manufacturing visualizations.
